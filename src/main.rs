@@ -7,24 +7,26 @@ use std::time::Duration;
 use sdl2::mouse::MouseButton;
 use sdl2::rect::{Rect, Point};
 use sdl2::render::WindowCanvas;
-use std::mem::swap;
 
 enum GuiState {
     Menu,
     Game
 }
 
-type Tile = Vec<Point>;
-
 struct AppState {
     gui_state: GuiState,
     game_state: GameState,
 }
 
+struct PlayerPiece {
+    tiles: Vec<Point>,
+    stationary: bool,
+}
+
 struct GameState {
     tiles: [[bool; 20]; 10],
     turns: i64,
-    active: Option<Tile>,
+    active: Option<PlayerPiece>,
 }
 
 impl AppState {
@@ -76,6 +78,7 @@ impl AppState {
 impl GameState {
     fn draw(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(255, 255, 0));
+
         for i in 0..self.tiles.len() {
             for j in 0..self.tiles[0].len() {
                 if self.tiles[i][j] {
@@ -84,7 +87,18 @@ impl GameState {
             }
         }
 
+        canvas.set_draw_color(Color::RGB(128, 50, 200));
+        match &self.active {
+            Some(piece) => {
+                for p in &piece.tiles {
+                    canvas.fill_rect(Rect::new(p.x() * 40, p.y() * 40, 40, 40))?
+                }
+            },
+            None => (),
+        }
+
         canvas.set_draw_color(Color::RGB(0, 0, 255));
+
         for i in 0..=self.tiles.len() {
             canvas.draw_line(Point::new((i * 40) as i32, 0), Point::new((i * 40) as i32, 800))?
         }
@@ -99,7 +113,9 @@ impl GameState {
     fn handle(&mut self, event: Event) -> bool {
         match event {
             Event::MouseMotion {
-                timestamp, window_id, which, mousestate, x, y, xrel, yrel
+                mousestate,
+                x, y,
+                ..
             } => {
                 if mousestate.left() {
                     let x = (x / 40) as usize;
@@ -111,8 +127,64 @@ impl GameState {
                     }
                 }
             }
+            Event::KeyDown {
+                keycode: Some(Keycode::A),
+                ..
+            } => {
+                match &self.active {
+                    Some(piece) => {
+                        if piece.tiles.iter().all(|p| p.x() > 0) && piece.tiles.iter().all(|p| !self.tiles[(p.x() - 1) as usize][p.y() as usize]) {
+                            self.active = Some(PlayerPiece{
+                                tiles: piece.tiles.clone().iter().map(|p| p.offset(-1, 0)).collect(),
+                                stationary: piece.stationary
+                            })
+                        }
+                    }
+                    None => ()
+                }
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::D),
+                ..
+            } => {
+                match &self.active {
+                    Some(piece) => {
+                        if piece.tiles.iter().all(|p| p.x() < (self.tiles.len() - 1) as i32)
+                            && piece.tiles.iter().all(|p| !self.tiles[(p.x() + 1) as usize][p.y() as usize]) {
+                            self.active = Some(PlayerPiece{
+                                tiles: piece.tiles.clone().iter().map(|p| p.offset(1, 0)).collect(),
+                                stationary: piece.stationary
+                            })
+                        }
+                    }
+                    None => ()
+                }
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::S),
+                ..
+            } => {
+                'loader: loop {
+                    match &self.active {
+                        Some(piece) => {
+                            if piece.tiles.iter().all(|p| p.y() < (self.tiles[0].len() - 1) as i32)
+                                && piece.tiles.iter().all(|p| !self.tiles[p.x() as usize][(p.y() + 1) as usize]) {
+                                self.active = Some(PlayerPiece {
+                                    tiles: piece.tiles.iter().map(|p| p.offset(0, 1)).collect(),
+                                    stationary: piece.stationary
+                                });
+                            } else {
+                                break 'loader
+                            }
+                        },
+                        None => break 'loader,
+                    }
+                }
+            }
             Event::MouseButtonDown {
-                timestamp, window_id, which, mouse_btn: MouseButton::Left, clicks, x, y
+                mouse_btn: MouseButton::Left,
+                x, y,
+                ..
             } => {
                 let x = (x / 40) as usize;
                 let y = (y / 40) as usize;
@@ -127,13 +199,50 @@ impl GameState {
     }
 
     fn update(&mut self) {
-        if self.turns % 30 == 0 {
-            for i in 0..self.tiles.len() {
-                for j in (1..self.tiles[0].len()).rev() {
-                    if self.tiles[i][j - 1] && !self.tiles[i][j] {
-                        self.tiles[i][j - 1] = false;
-                        self.tiles[i][j] = true;
+        if self.turns % 10 == 0 {
+            match &self.active {
+                Some(piece) => {
+                    if piece.tiles.iter().all(|t| t.y() < (self.tiles[0].len() - 1) as i32)
+                        && piece.tiles.iter().all(|p| !self.tiles[p.x() as usize][(p.y() + 1) as usize]) {
+                        self.active = Some(PlayerPiece{
+                            tiles: piece.tiles.iter().map(|p| p.offset(0, 1)).collect(),
+                            stationary: false
+                        })
+                    } else {
+                        if piece.stationary {
+                            for p in &piece.tiles {
+                                self.tiles[p.x() as usize][p.y() as usize] = true;
+                            }
+                            self.active = None;
+                        } else {
+                            self.active = Some(PlayerPiece{
+                                tiles: piece.tiles.clone(),
+                                stationary: true
+                            });
+                        }
                     }
+                }
+                None => {
+                    let options: Vec<usize> = self.tiles.iter()
+                        .map(|col| col[0])
+                        .enumerate()
+                        .filter(|(_, v)| !*v)
+                        .map(|(i, _)| i)
+                        .collect();
+
+                    if options.is_empty() {
+                        panic!("no options")
+                    }
+
+                    self.active = Some(PlayerPiece{
+                        tiles: vec![
+                            Point::new(4, 0),
+                            Point::new(5, 0),
+                            Point::new(4, 1),
+                            Point::new(5, 1),
+                        ],
+                        stationary: false
+                    });
                 }
             }
 
@@ -187,7 +296,6 @@ fn main() -> Result<(), String>{
     canvas.present();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
-    let mut frame = 0;
 
     let mut app_state = AppState {
         gui_state: GuiState::Menu,
@@ -199,12 +307,8 @@ fn main() -> Result<(), String>{
     };
 
     'running: loop {
-        frame += 1;
-
-        for event in event_pump.poll_iter() {
-            if !app_state.handle(event) {
-                break 'running
-            }
+        if !event_pump.poll_iter().all(|e| app_state.handle(e)) {
+            break 'running
         }
 
         app_state.update();
