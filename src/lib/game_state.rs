@@ -34,7 +34,7 @@ impl GameState {
 
         match &self.active {
             Some(piece) => {
-                piece.render(canvas)?;
+                piece.render(canvas, &self.tiles)?;
             },
             None => (),
         }
@@ -54,11 +54,7 @@ impl GameState {
 
     pub fn handle(&mut self, event: Event) -> bool {
         match event {
-            Event::MouseMotion {
-                mousestate,
-                x, y,
-                ..
-            } => {
+            Event::MouseMotion { mousestate, x, y, .. } => {
                 if mousestate.left() {
                     let x = (x / 40) as usize;
                     let y = (y / 40) as usize;
@@ -94,11 +90,7 @@ impl GameState {
                     }
                 }
             }
-            Event::MouseButtonDown {
-                mouse_btn: MouseButton::Left,
-                x, y,
-                ..
-            } => {
+            Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } => {
                 let x = (x / 40) as usize;
                 let y = (y / 40) as usize;
                 if x < 10 {

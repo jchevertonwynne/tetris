@@ -5,29 +5,22 @@ extern crate sdl2;
 use sdl2::pixels::Color;
 use std::time::Duration;
 use crate::lib::AppState;
+use std::error::Error;
 
 fn main() -> Result<(), String>{
-    let context = sdl2::init();
-
-    let sdl_context = match context {
-        Ok(result) => result,
-        Err(message) => {
-            println!("SDL reported error: '{}'", message);
-            return Ok(());
-        }
-    };
+    let sdl_context = sdl2::init()?;
 
     let video_subsystem = sdl_context.video()?;
 
     let window = video_subsystem
-        .window("tetris", 800, 800)
+        .window("tetrust", 800, 800)
         .position_centered()
         .build()
-        .unwrap();
+        .or_else(|e| Err(e.to_string()))?;
 
     let mut canvas = window.into_canvas()
         .build()
-        .unwrap();
+        .or_else(|e| Err(e.to_string()))?;
 
     canvas.set_draw_color(Color::RGB(0, 255, 255));
     canvas.clear();

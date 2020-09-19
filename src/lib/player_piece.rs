@@ -20,6 +20,17 @@ impl PlayerPiece {
         }
     }
 
+    pub fn lowest_possible_position(&self, board: &[[bool; 20]; 10]) -> PlayerPiece {
+        let mut res = PlayerPiece{
+            tiles: self.tiles.clone(),
+            stationary: self.stationary,
+        };
+        while res.can_go_down(board) {
+            res = res.go_down(board).unwrap()
+        }
+        res
+    }
+
     pub fn tiles(&self) -> &Vec<Point> {
         &self.tiles
     }
@@ -81,11 +92,17 @@ impl PlayerPiece {
         }
     }
 
-    pub fn render(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
+    pub fn render(&self, canvas: &mut WindowCanvas, board: &[[bool; 20]; 10]) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(128, 50, 200));
         for p in &self.tiles {
             canvas.fill_rect(Rect::new(p.x() * 40, p.y() * 40, 40, 40))?
         }
+
+        canvas.set_draw_color(Color::RGB(0, 255, 255));
+        for p in self.lowest_possible_position(board).tiles {
+            canvas.draw_rect(Rect::new(p.x() * 40 + 1, p.y() * 40 + 1, 38, 38))?;
+        }
+
         Ok(())
     }
 }

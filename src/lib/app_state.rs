@@ -42,7 +42,9 @@ impl AppState {
 
     pub fn handle(&mut self, event: Event) -> bool {
         match event {
-            Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => false,
+            Event::Quit { .. }
+            | Event::KeyDown { keycode: Some(Keycode::Escape), .. }
+            | Event::KeyDown { keycode: Some(Keycode::Q), .. }=> false,
             Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
                 match &self.gui_state {
                     GuiState::Menu => self.gui_state = GuiState::Game,
