@@ -109,6 +109,7 @@ dependencies = [
 name = "tetris"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "rand",
  "sdl2",
 ]

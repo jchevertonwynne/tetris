@@ -49,22 +49,14 @@ impl GameState {
             canvas.draw_line(Point::new(0, (j * 40) as i32), Point::new(400, (j * 40) as i32))?
         }
 
+        canvas.set_draw_color(Color::RGB(255, 0, 0));
+        canvas.draw_line(Point::new(0, 160), Point::new(400, 160))?;
+
         Ok(())
     }
 
     pub fn handle(&mut self, event: Event) -> bool {
         match event {
-            Event::MouseMotion { mousestate, x, y, .. } => {
-                if mousestate.left() {
-                    let x = (x / 40) as usize;
-                    let y = (y / 40) as usize;
-                    if x < 10 {
-                        if !self.tiles[x][y] {
-                            self.tiles[x][y] = true;
-                        }
-                    }
-                }
-            }
             Event::KeyDown { keycode: Some(Keycode::A), .. } | Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
                 if let Some(piece) = &self.active {
                     if let Some(new_piece) = piece.go_left(&self.tiles) {
@@ -90,6 +82,14 @@ impl GameState {
                     }
                 }
             }
+            Event::KeyDown { keycode: Some(Keycode::R), .. }
+            | Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+                if let Some(p) = &self.active {
+                    if let Some(new_p) = p.try_rotate(&self.tiles) {
+                        self.active = Some(new_p);
+                    }
+                }
+            }
             Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } => {
                 let x = (x / 40) as usize;
                 let y = (y / 40) as usize;
@@ -98,20 +98,31 @@ impl GameState {
                     *tile = !*tile;
                 }
             }
+            Event::MouseMotion { mousestate, x, y, .. } => {
+                if mousestate.left() {
+                    let x = (x / 40) as usize;
+                    let y = (y / 40) as usize;
+                    if x < 10 {
+                        if !self.tiles[x][y] {
+                            self.tiles[x][y] = true;
+                        }
+                    }
+                }
+            }
             _ => ()
         }
         true
     }
 
     pub fn update(&mut self) {
-        if self.turns % 10 == 0 {
+        if self.turns % 20 == 0 {
             match &self.active {
                 Some(piece) => {
                     if let Some(p) = piece.go_down(&self.tiles) {
                         self.active = Some(p)
                     } else {
                         if piece.is_stationary() {
-                            for p in piece.tiles() {
+                            for p in piece.get_tiles() {
                                 self.tiles[p.x() as usize][p.y() as usize] = true;
                             }
                             self.active = None;
@@ -121,17 +132,6 @@ impl GameState {
                     }
                 }
                 None => {
-                    let options: Vec<usize> = self.tiles.iter()
-                        .map(|col| col[0])
-                        .enumerate()
-                        .filter(|(_, v)| !*v)
-                        .map(|(i, _)| i)
-                        .collect();
-
-                    if options.is_empty() {
-                        panic!("no options")
-                    }
-
                     self.active = Some(PlayerPiece::new());
                 }
             }

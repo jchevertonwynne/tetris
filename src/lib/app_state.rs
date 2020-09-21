@@ -5,9 +5,11 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use crate::lib::GameState;
 
+
+#[derive(PartialEq)]
 enum GuiState {
     Menu,
-    Game
+    Game,
 }
 
 pub struct AppState {
@@ -45,14 +47,20 @@ impl AppState {
             Event::Quit { .. }
             | Event::KeyDown { keycode: Some(Keycode::Escape), .. }
             | Event::KeyDown { keycode: Some(Keycode::Q), .. }=> false,
-            Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+            Event::KeyDown { keycode: Some(Keycode::P), .. } => {
                 match &self.gui_state {
                     GuiState::Menu => self.gui_state = GuiState::Game,
                     GuiState::Game => self.gui_state = GuiState::Menu,
                 }
                 true
             }
-            _ => self.game_state.handle(event)
+            _ => {
+                if self.gui_state == GuiState::Game {
+                    self.game_state.handle(event)
+                } else {
+                    true
+                }
+            }
         }
     }
 
