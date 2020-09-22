@@ -85,7 +85,7 @@ impl GameState {
             Event::KeyDown { keycode: Some(Keycode::R), .. }
             | Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
                 if let Some(p) = &self.active {
-                    if let Some(new_p) = p.try_rotate(&self.tiles) {
+                    if let Some(new_p) = p.rotate(&self.tiles) {
                         self.active = Some(new_p);
                     }
                 }
@@ -115,7 +115,7 @@ impl GameState {
     }
 
     pub fn update(&mut self) {
-        if self.turns % 20 == 0 {
+        if self.turns % 30 == 0 {
             match &self.active {
                 Some(piece) => {
                     if let Some(p) = piece.go_down(&self.tiles) {

@@ -62,7 +62,7 @@ lazy_static! {
             ],
             stationary: false
         },
-        PlayerPiece{ // L
+        PlayerPiece{ // L 1
             anchor: Point::new(3, 0),
             box_size: 3,
             tiles: [
@@ -73,7 +73,7 @@ lazy_static! {
             ],
             stationary: false
         },
-        PlayerPiece{ // L
+        PlayerPiece{ // L 2
             anchor: Point::new(3, 0),
             box_size: 3,
             tiles: [
@@ -111,16 +111,29 @@ impl PlayerPiece {
         OPTIONS[rng.gen_range(0, OPTIONS.len())].clone()
     }
 
-    pub fn try_rotate(&self,  board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
-        let new = self.rotate();
-        if new.get_tiles().iter().all(|t| t.x() > 0 && t.x() < board.len() as i32 && t.y() > 0 && t.y() < board[0].len() as i32 && !board[t.x() as usize][t.y() as usize]) {
-            Some(new)
-        } else {
-            None
+    pub fn rotate(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
+        let new = self.try_rotate();
+        if new.legal(board) {
+            return Some(new)
         }
+        else if self.anchor.x() < 0 {
+            if let Some(piece_right) = self.go_right(board).map(|p| p.try_rotate()) {
+                if piece_right.legal(board) {
+                    return Some(piece_right)
+                }
+            }
+        }
+        else if self.anchor.x + self.box_size as i32 >= board.len() as i32 {
+            if let Some(piece_left) = self.go_left(board).map(|p| p.try_rotate()) {
+                if piece_left.legal(board) {
+                    return Some(piece_left)
+                }
+            }
+        }
+        None
     }
 
-    fn rotate(&self) -> PlayerPiece {
+    fn try_rotate(&self) -> PlayerPiece {
         let mut pieces: [Point; 4] = [Point::new(0, 0); 4];
         for (i, p) in self.tiles.iter().enumerate() {
             pieces[i] = Point::new(self.box_size as i32 - 1 - p.y(), p.x());
@@ -155,48 +168,41 @@ impl PlayerPiece {
     }
 
     pub fn go_left(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
-        if self.can_go_left(board) {
-            Some(self.move_piece(-1, 0))
+        let left = self.move_piece(-1, 0);
+        if left.legal(board) {
+            Some(left)
         } else {
             None
         }
-    }
-
-    fn can_go_left(&self, board: &[[bool; 20]; 10]) -> bool {
-        self.get_tiles().iter().all(|p| p.x() > 0)
-            && self.get_tiles().iter().all(|p| !board[(p.x() - 1) as usize][p.y() as usize])
     }
 
     pub fn go_right(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
-        if self.can_go_right(board) {
-            Some(self.move_piece(1, 0))
+        let right = self.move_piece(1, 0);
+        if right.legal(board) {
+            Some(right)
         } else {
             None
         }
-    }
-
-    fn can_go_right(&self, board: &[[bool; 20]; 10]) -> bool {
-        self.get_tiles().iter().all(|p| p.x() < (board.len() - 1) as i32)
-            && self.get_tiles().iter().all(|p| !board[(p.x() + 1) as usize][p.y() as usize])
     }
 
     pub fn go_down(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
-        if self.can_go_down(board) {
-            Some(self.move_piece(0, 1))
+        let down = self.move_piece(0, 1);
+        if down.legal(board) {
+            Some(down)
         } else {
             None
         }
     }
 
-    fn can_go_down(&self, board: &[[bool; 20]; 10]) -> bool {
-        self.get_tiles().iter().all(|p| p.y() < (board[0].len() - 1) as i32)
-            && self.get_tiles().iter().all(|p| !board[p.x() as usize][(p.y() + 1) as usize])
-    }
-
-    pub fn move_piece(&self, x: i32, y: i32) -> PlayerPiece {
+    fn move_piece(&self, x: i32, y: i32) -> PlayerPiece {
         let mut new_piece = self.clone();
         new_piece.anchor = new_piece.anchor.offset(x, y);
         new_piece
+    }
+
+    fn legal(&self, board: &[[bool; 20]; 10]) -> bool {
+        self.get_tiles().iter().all(|t| t.x() >= 0 && t.x() < board.len() as i32 && t.y() >= 0 && t.y() < board[0].len() as i32
+            && !board[t.x() as usize][t.y() as usize])
     }
 
     pub fn render(&self, canvas: &mut WindowCanvas, board: &[[bool; 20]; 10]) -> Result<(), String> {
