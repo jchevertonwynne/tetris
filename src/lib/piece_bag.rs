@@ -10,8 +10,16 @@ pub struct PieceBag {
 impl PieceBag {
     pub fn new() -> Self {
         PieceBag{
-            remaining: (0..7).map(|i| PlayerPiece::new(i)).collect(),
-            queued: (0..7).map(|i| PlayerPiece::new(i)).collect()
+            remaining: {
+                let mut tiles: Vec<_> = (0..7).map(|i| PlayerPiece::new(i)).collect();
+                tiles.shuffle(&mut thread_rng());
+                tiles
+            },
+            queued: {
+                let mut tiles: Vec<_> = (0..7).map(|i| PlayerPiece::new(i)).collect();
+                tiles.shuffle(&mut thread_rng());
+                tiles
+            },
         }
     }
 
@@ -20,8 +28,8 @@ impl PieceBag {
             Some(piece) => piece,
             None => {
                 self.remaining = (0..7).map(|i| PlayerPiece::new(i)).collect();
-                std::mem::swap(&mut self.remaining, &mut self.queued);
                 self.remaining.shuffle(&mut thread_rng());
+                std::mem::swap(&mut self.remaining, &mut self.queued);
                 self.remaining.pop().unwrap()
             }
         }

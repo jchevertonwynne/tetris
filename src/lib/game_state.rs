@@ -14,7 +14,7 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new() -> GameState {
+    pub fn new() -> Self {
         GameState {
             tiles: [[false; 20]; 10],
             turns: 0,

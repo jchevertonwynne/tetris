@@ -21,7 +21,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> AppState {
+    pub fn new() -> Self {
         AppState {
             gui_state: GuiState::Menu,
             game_state: GameState::new(),
