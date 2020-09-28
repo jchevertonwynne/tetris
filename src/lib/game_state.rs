@@ -4,12 +4,13 @@ use sdl2::rect::{Point, Rect};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
-use crate::lib::PlayerPiece;
+use crate::lib::{PlayerPiece, PieceBag};
 
 pub struct GameState {
     tiles: [[bool; 20]; 10],
     turns: i64,
     active: Option<PlayerPiece>,
+    bag: PieceBag
 }
 
 impl GameState {
@@ -18,6 +19,7 @@ impl GameState {
             tiles: [[false; 20]; 10],
             turns: 0,
             active: None,
+            bag: PieceBag::new()
         }
     }
 
@@ -103,9 +105,7 @@ impl GameState {
                     let x = (x / 40) as usize;
                     let y = (y / 40) as usize;
                     if x < 10 {
-                        if !self.tiles[x][y] {
-                            self.tiles[x][y] = true;
-                        }
+                        self.tiles[x][y] = true;
                     }
                 }
             }
@@ -114,8 +114,19 @@ impl GameState {
         true
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Option<u64> {
+        let mut score = 0;
+        let mut scalor = 1;
+
         if self.turns % 30 == 0 {
+            for i in 0..self.tiles.len() {
+                for j in 0..4 {
+                    if self.tiles[i][j] {
+                        return None
+                    }
+                }
+            }
+
             match &self.active {
                 Some(piece) => {
                     if let Some(p) = piece.go_down(&self.tiles) {
@@ -132,12 +143,14 @@ impl GameState {
                     }
                 }
                 None => {
-                    self.active = Some(PlayerPiece::new());
+                    self.active = Some(self.bag.next());
                 }
             }
 
             for j in 0..self.tiles[0].len() {
                 if self.tiles.iter().map(|row| row[j]).all(|v| v) {
+                    score += scalor;
+                    scalor += 1;
                     for i in 0..self.tiles.len() {
                         self.tiles[i][j] = false;
                     }
@@ -155,5 +168,7 @@ impl GameState {
         }
 
         self.turns += 1;
+
+        Some(score)
     }
 }

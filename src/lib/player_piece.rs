@@ -1,7 +1,6 @@
 use sdl2::rect::{Point, Rect};
 use sdl2::render::WindowCanvas;
 use sdl2::pixels::Color;
-use rand::Rng;
 use lazy_static::lazy_static;
 use std::ops::Add;
 
@@ -106,9 +105,8 @@ impl Clone for PlayerPiece {
 }
 
 impl PlayerPiece {
-    pub fn new() -> PlayerPiece {
-        let mut rng = rand::thread_rng();
-        OPTIONS[rng.gen_range(0, OPTIONS.len())].clone()
+    pub fn new(i: usize) -> PlayerPiece {
+        OPTIONS[i].clone()
     }
 
     pub fn rotate(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
