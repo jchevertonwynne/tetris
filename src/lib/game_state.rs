@@ -23,6 +23,10 @@ impl GameState {
         }
     }
 
+    pub fn peek_next(&self) -> &PlayerPiece {
+        self.bag.peek()
+    }
+
     pub fn draw(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(255, 255, 0));
 
@@ -36,7 +40,7 @@ impl GameState {
 
         match &self.active {
             Some(piece) => {
-                piece.render(canvas, &self.tiles)?;
+                piece.draw(canvas, &self.tiles)?;
             },
             None => (),
         }

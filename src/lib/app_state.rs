@@ -1,10 +1,10 @@
 use sdl2::render::WindowCanvas;
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
+use sdl2::rect::{Rect, Point};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use crate::lib::GameState;
-use std::path::Path;
+use sdl2::ttf::Font;
 
 #[derive(PartialEq)]
 enum GuiState {
@@ -13,20 +13,22 @@ enum GuiState {
     Lost
 }
 
-pub struct AppState {
+pub struct AppState<'a> {
     gui_state: GuiState,
     game_state: GameState,
     score: u64,
-    high_score: u64
+    high_score: u64,
+    font: Font<'a, 'static>
 }
 
-impl AppState {
-    pub fn new() -> Self {
+impl AppState<'_> {
+    pub fn new<'a>(font: Font<'a, 'static>) -> AppState<'a> {
         AppState {
             gui_state: GuiState::Menu,
             game_state: GameState::new(),
             score: 0,
-            high_score: 0
+            high_score: 0,
+            font
         }
     }
 
@@ -35,22 +37,30 @@ impl AppState {
         canvas.clear();
 
         self.game_state.draw(canvas)?;
+        self.draw_pause_state(canvas)?;
+        self.draw_scores(canvas)?;
+        self.draw_next(canvas)?;
 
+        canvas.present();
+
+        Ok(())
+    }
+
+    pub fn draw_pause_state(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
         match self.gui_state {
             GuiState::Menu
             | GuiState::Lost => canvas.set_draw_color(Color::RGB(255, 0, 0)),
             GuiState::Game => canvas.set_draw_color(Color::RGB(0, 255, 0)),
         }
-        canvas.fill_rect(Rect::new(500, 100, 200, 200))?;
+        canvas.fill_rect(Rect::new(750, 0, 50, 50))
+    }
 
+    pub fn draw_scores(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(0, 255, 0));
 
-        let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
-        let font = ttf_context.load_font(Path::new("DroidSansMono.ttf"), 128)?;
-
-        let score = font.render(&*format!("Score: {}", self.score))
+        let score = self.font.render(&*format!("Score: {}", self.score))
             .blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string())?;
-        let high_score = font.render(&*format!("High score: {}", self.high_score))
+        let high_score = self.font.render(&*format!("High score: {}", self.high_score))
             .blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string())?;
 
         let texture_creator = canvas.texture_creator();
@@ -59,9 +69,21 @@ impl AppState {
         let high_score_texture = texture_creator.create_texture_from_surface(high_score).map_err(|e| e.to_string())?;
 
         canvas.copy(&score_texture, None, Some(Rect::new(450, 400, 200, 100)))?;
-        canvas.copy(&high_score_texture, None, Some(Rect::new(450, 500, 300, 100)))?;
+        canvas.copy(&high_score_texture, None, Some(Rect::new(450, 500, 300, 100)))
+    }
 
-        canvas.present();
+    pub fn draw_next(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
+        canvas.set_draw_color(Color::RGB(128, 50, 200));
+
+        for square in self.game_state.peek_next().base().iter() {
+            canvas.fill_rect( Rect::new(500 + 50 * square.x(), 100 + 50 * square.y(), 50, 50))?;
+        }
+
+        canvas.set_draw_color(Color::RGB(0, 0, 255));
+        for i in 0..=4 {
+            canvas.draw_line(Point::new(500, 100 + i * 50), Point::new(700, 100 + i * 50))?;
+            canvas.draw_line(Point::new(500 + i * 50, 100), Point::new(500 + i * 50, 300))?;
+        }
 
         Ok(())
     }

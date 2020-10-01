@@ -109,6 +109,10 @@ impl PlayerPiece {
         OPTIONS[i].clone()
     }
 
+    pub fn base(&self) -> [Point; 4] {
+        self.tiles
+    }
+
     pub fn rotate(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
         let new = self.try_rotate();
         if new.legal(board) {
@@ -203,7 +207,7 @@ impl PlayerPiece {
             && !board[t.x() as usize][t.y() as usize])
     }
 
-    pub fn render(&self, canvas: &mut WindowCanvas, board: &[[bool; 20]; 10]) -> Result<(), String> {
+    pub fn draw(&self, canvas: &mut WindowCanvas, board: &[[bool; 20]; 10]) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(128, 50, 200));
         for p in &self.get_tiles() {
             canvas.fill_rect(Rect::new(p.x() * 40, p.y() * 40, 40, 40))?

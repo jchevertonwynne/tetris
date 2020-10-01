@@ -37,9 +37,9 @@ impl PieceBag {
 
     pub fn peek(&self) -> &PlayerPiece {
         if self.remaining.len() != 0 {
-            &self.remaining[0]
+            &self.remaining[self.remaining.len() - 1]
         } else {
-            &self.queued[0]
+            &self.queued[self.queued.len() - 1]
         }
     }
 }

@@ -5,6 +5,7 @@ extern crate sdl2;
 use sdl2::pixels::Color;
 use std::time::Duration;
 use crate::lib::AppState;
+use std::path::Path;
 
 fn main() -> Result<(), String>{
     let sdl_context = sdl2::init()?;
@@ -23,7 +24,10 @@ fn main() -> Result<(), String>{
     canvas.clear();
     canvas.present();
 
-    let mut app_state = AppState::new();
+    let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
+    let font = ttf_context.load_font(Path::new("DroidSansMono.ttf"), 64)?;
+
+    let mut app_state = AppState::new(font);
 
     'running: loop {
         if !event_pump.poll_iter().all(|e| app_state.handle(e)) {
