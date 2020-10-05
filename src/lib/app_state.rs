@@ -1,16 +1,18 @@
-use sdl2::render::WindowCanvas;
-use sdl2::pixels::Color;
-use sdl2::rect::{Rect, Point};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use crate::lib::GameState;
+use sdl2::pixels::Color;
+use sdl2::rect::{Point, Rect};
+use sdl2::render::WindowCanvas;
 use sdl2::ttf::Font;
+
+use crate::lib::{GameState};
+use std::sync::mpsc::SyncSender;
 
 #[derive(PartialEq)]
 enum GuiState {
     Menu,
     Game,
-    Lost
+    Lost,
 }
 
 pub struct AppState<'a> {
@@ -18,7 +20,7 @@ pub struct AppState<'a> {
     game_state: GameState,
     score: u64,
     high_score: u64,
-    font: Font<'a, 'static>
+    font: Font<'a, 'static>,
 }
 
 impl AppState<'_> {
@@ -28,7 +30,7 @@ impl AppState<'_> {
             game_state: GameState::new(),
             score: 0,
             high_score: 0,
-            font
+            font,
         }
     }
 
@@ -76,7 +78,7 @@ impl AppState<'_> {
         canvas.set_draw_color(Color::RGB(128, 50, 200));
 
         for square in self.game_state.peek_next().base().iter() {
-            canvas.fill_rect( Rect::new(500 + 50 * square.x(), 100 + 50 * square.y(), 50, 50))?;
+            canvas.fill_rect(Rect::new(500 + 50 * square.x(), 100 + 50 * square.y(), 50, 50))?;
         }
 
         canvas.set_draw_color(Color::RGB(0, 0, 255));
@@ -92,7 +94,7 @@ impl AppState<'_> {
         match event {
             Event::Quit { .. }
             | Event::KeyDown { keycode: Some(Keycode::Escape), .. }
-            | Event::KeyDown { keycode: Some(Keycode::Q), .. }=> false,
+            | Event::KeyDown { keycode: Some(Keycode::Q), .. } => false,
             Event::KeyDown { keycode: Some(Keycode::P), .. } => {
                 match &self.gui_state {
                     GuiState::Menu => self.gui_state = GuiState::Game,
@@ -105,6 +107,16 @@ impl AppState<'_> {
                 }
                 true
             }
+            Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+                match &self.gui_state {
+                    GuiState::Menu => self.gui_state = GuiState::Game,
+                    GuiState::Game => {
+                        return self.game_state.handle(event);
+                    }
+                    _ => ()
+                };
+                true
+            }
             _ => {
                 if self.gui_state == GuiState::Game {
                     self.game_state.handle(event)
@@ -115,12 +127,12 @@ impl AppState<'_> {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, audio: SyncSender<bool>) {
         match self.gui_state {
             GuiState::Menu
             | GuiState::Lost => (),
             GuiState::Game => {
-                match self.game_state.update() {
+                match self.game_state.update(audio) {
                     Some(s) => {
                         self.score += s;
                     }

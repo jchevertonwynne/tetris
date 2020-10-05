@@ -1,6 +1,4 @@
 use crate::lib::PlayerPiece;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 
 pub struct PieceBag {
     remaining: Vec<PlayerPiece>,
@@ -9,17 +7,9 @@ pub struct PieceBag {
 
 impl PieceBag {
     pub fn new() -> Self {
-        PieceBag{
-            remaining: {
-                let mut tiles: Vec<_> = (0..7).map(|i| PlayerPiece::new(i)).collect();
-                tiles.shuffle(&mut thread_rng());
-                tiles
-            },
-            queued: {
-                let mut tiles: Vec<_> = (0..7).map(|i| PlayerPiece::new(i)).collect();
-                tiles.shuffle(&mut thread_rng());
-                tiles
-            },
+        PieceBag {
+            remaining: PlayerPiece::all_shuffled(),
+            queued: PlayerPiece::all_shuffled(),
         }
     }
 
@@ -27,9 +17,8 @@ impl PieceBag {
         match self.remaining.pop() {
             Some(piece) => piece,
             None => {
-                self.remaining = (0..7).map(|i| PlayerPiece::new(i)).collect();
-                self.remaining.shuffle(&mut thread_rng());
                 std::mem::swap(&mut self.remaining, &mut self.queued);
+                self.queued = PlayerPiece::all_shuffled();
                 self.remaining.pop().unwrap()
             }
         }

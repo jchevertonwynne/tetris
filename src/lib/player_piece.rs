@@ -1,8 +1,11 @@
+use std::ops::Add;
+
+use lazy_static::lazy_static;
+use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::WindowCanvas;
-use sdl2::pixels::Color;
-use lazy_static::lazy_static;
-use std::ops::Add;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 lazy_static! {
     static ref OPTIONS: [PlayerPiece; 7] = [
@@ -95,11 +98,11 @@ pub struct PlayerPiece {
 
 impl Clone for PlayerPiece {
     fn clone(&self) -> Self {
-        Self{
+        Self {
             anchor: self.anchor,
             box_size: self.box_size,
             tiles: self.tiles,
-            stationary: self.stationary
+            stationary: self.stationary,
         }
     }
 }
@@ -109,6 +112,12 @@ impl PlayerPiece {
         OPTIONS[i].clone()
     }
 
+    pub fn all_shuffled() -> Vec<PlayerPiece> {
+        let mut tiles: Vec<_> = (0..7).map(|i| PlayerPiece::new(i)).collect();
+        tiles.shuffle(&mut thread_rng());
+        tiles
+    }
+
     pub fn base(&self) -> [Point; 4] {
         self.tiles
     }
@@ -116,19 +125,17 @@ impl PlayerPiece {
     pub fn rotate(&self, board: &[[bool; 20]; 10]) -> Option<PlayerPiece> {
         let new = self.try_rotate();
         if new.legal(board) {
-            return Some(new)
-        }
-        else if self.anchor.x() < 0 {
+            return Some(new);
+        } else if self.anchor.x() < 0 {
             if let Some(piece_right) = self.go_right(board).map(|p| p.try_rotate()) {
                 if piece_right.legal(board) {
-                    return Some(piece_right)
+                    return Some(piece_right);
                 }
             }
-        }
-        else if self.anchor.x + self.box_size as i32 >= board.len() as i32 {
+        } else if self.anchor.x + self.box_size as i32 >= board.len() as i32 {
             if let Some(piece_left) = self.go_left(board).map(|p| p.try_rotate()) {
                 if piece_left.legal(board) {
-                    return Some(piece_left)
+                    return Some(piece_left);
                 }
             }
         }

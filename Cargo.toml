@@ -13,4 +13,4 @@ lazy_static = "1.4.0"
 [dependencies.sdl2]
 version = "0.34.3"
 default-features = false
-features = ["ttf"]
+features = ["ttf", "mixer"]

@@ -1,16 +1,18 @@
-use sdl2::render::WindowCanvas;
-use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::mouse::MouseButton;
-use crate::lib::{PlayerPiece, PieceBag};
+use sdl2::pixels::Color;
+use sdl2::rect::{Point, Rect};
+use sdl2::render::WindowCanvas;
+
+use crate::lib::{PieceBag, PlayerPiece};
+use std::sync::mpsc::SyncSender;
 
 pub struct GameState {
     tiles: [[bool; 20]; 10],
     turns: i64,
     active: Option<PlayerPiece>,
-    bag: PieceBag
+    bag: PieceBag,
 }
 
 impl GameState {
@@ -19,7 +21,7 @@ impl GameState {
             tiles: [[false; 20]; 10],
             turns: 0,
             active: None,
-            bag: PieceBag::new()
+            bag: PieceBag::new(),
         }
     }
 
@@ -33,7 +35,7 @@ impl GameState {
         for i in 0..self.tiles.len() {
             for j in 0..self.tiles[0].len() {
                 if self.tiles[i][j] {
-                    canvas.fill_rect(Rect::new((i * 40) as i32, (j * 40) as i32, 40, 40))?
+                    canvas.fill_rect(Rect::new((i * 40) as i32, (j * 40) as i32, 40, 40))?;
                 }
             }
         }
@@ -41,18 +43,18 @@ impl GameState {
         match &self.active {
             Some(piece) => {
                 piece.draw(canvas, &self.tiles)?;
-            },
+            }
             None => (),
         }
 
         canvas.set_draw_color(Color::RGB(0, 0, 255));
 
         for i in 0..=self.tiles.len() {
-            canvas.draw_line(Point::new((i * 40) as i32, 0), Point::new((i * 40) as i32, 800))?
+            canvas.draw_line(Point::new((i * 40) as i32, 0), Point::new((i * 40) as i32, 800))?;
         }
 
         for j in 0..=self.tiles[0].len() {
-            canvas.draw_line(Point::new(0, (j * 40) as i32), Point::new(400, (j * 40) as i32))?
+            canvas.draw_line(Point::new(0, (j * 40) as i32), Point::new(400, (j * 40) as i32))?;
         }
 
         canvas.set_draw_color(Color::RGB(255, 0, 0));
@@ -63,27 +65,30 @@ impl GameState {
 
     pub fn handle(&mut self, event: Event) -> bool {
         match event {
-            Event::KeyDown { keycode: Some(Keycode::A), .. } | Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
+            Event::KeyDown { keycode: Some(Keycode::A), .. }
+            | Event::KeyDown { keycode: Some(Keycode::Left), .. } => {
                 if let Some(piece) = &self.active {
                     if let Some(new_piece) = piece.go_left(&self.tiles) {
                         self.active = Some(new_piece);
                     }
                 }
             }
-            Event::KeyDown { keycode: Some(Keycode::D), .. } | Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
+            Event::KeyDown { keycode: Some(Keycode::D), .. }
+            | Event::KeyDown { keycode: Some(Keycode::Right), .. } => {
                 if let Some(piece) = &self.active {
                     if let Some(new_piece) = piece.go_right(&self.tiles) {
                         self.active = Some(new_piece);
                     }
                 }
             }
-            Event::KeyDown { keycode: Some(Keycode::S), .. } | Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
+            Event::KeyDown { keycode: Some(Keycode::S), .. }
+            | Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
                 'loader: loop {
                     if let Some(piece) = &self.active {
                         if let Some(new_piece) = piece.go_down(&self.tiles) {
                             self.active = Some(new_piece);
                         } else {
-                            break 'loader
+                            break 'loader;
                         }
                     }
                 }
@@ -100,8 +105,7 @@ impl GameState {
                 let x = (x / 40) as usize;
                 let y = (y / 40) as usize;
                 if x < 10 {
-                    let tile = &mut self.tiles[x][y];
-                    *tile = !*tile;
+                    self.tiles[x][y] = !self.tiles[x][y];
                 }
             }
             Event::MouseMotion { mousestate, x, y, .. } => {
@@ -118,16 +122,16 @@ impl GameState {
         true
     }
 
-    pub fn update(&mut self) -> Option<u64> {
+    pub fn update(&mut self, audio: SyncSender<bool>) -> Option<u64> {
         let mut score = 0;
-        let mut scalor = 1;
+        let mut scalar = 1;
+
+        let mut play_sound = false;
 
         if self.turns % 30 == 0 {
             for i in 0..self.tiles.len() {
-                for j in 0..4 {
-                    if self.tiles[i][j] {
-                        return None
-                    }
+                if (0..4).any(|j| self.tiles[i][j]) {
+                    return None;
                 }
             }
 
@@ -152,12 +156,13 @@ impl GameState {
             }
 
             for j in 0..self.tiles[0].len() {
-                if self.tiles.iter().map(|row| row[j]).all(|v| v) {
-                    score += scalor;
-                    scalor += 1;
+                if self.tiles.iter().all(|row| row[j]) {
+                    score += scalar;
+                    scalar += 1;
                     for i in 0..self.tiles.len() {
                         self.tiles[i][j] = false;
                     }
+                    play_sound = true;
                 }
             }
 
@@ -168,6 +173,10 @@ impl GameState {
                         self.tiles[i][j - 1] = false;
                     }
                 }
+            }
+
+            if play_sound {
+                audio.send(true).expect("should send sound");
             }
         }
 
