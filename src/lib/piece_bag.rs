@@ -31,4 +31,10 @@ impl PieceBag {
             &self.queued[self.queued.len() - 1]
         }
     }
+
+    pub fn swap(&mut self, piece: PlayerPiece) -> PlayerPiece {
+        let out = self.next();
+        self.remaining.push(piece);
+        out
+    }
 }

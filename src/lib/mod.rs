@@ -1,4 +1,5 @@
 pub use app_state::AppState;
+pub use app_state::Sounds;
 pub use game_state::GameState;
 pub use piece_bag::PieceBag;
 pub use player_piece::PlayerPiece;

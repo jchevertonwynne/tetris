@@ -5,7 +5,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::WindowCanvas;
 
-use crate::lib::{PieceBag, PlayerPiece};
+use crate::lib::{PieceBag, PlayerPiece, Sounds};
 use std::sync::mpsc::SyncSender;
 
 pub struct GameState {
@@ -90,6 +90,8 @@ impl GameState {
                         } else {
                             break 'loader;
                         }
+                    } else {
+                        break 'loader;
                     }
                 }
             }
@@ -99,6 +101,14 @@ impl GameState {
                     if let Some(new_p) = p.rotate(&self.tiles) {
                         self.active = Some(new_p);
                     }
+                }
+            }
+            Event::KeyDown { keycode: Some(Keycode::Q), .. } => {
+                match &self.active {
+                    Some(piece) => {
+                        self.active = Some(self.bag.swap(piece.clone()));
+                    }
+                    None => ()
                 }
             }
             Event::MouseButtonDown { mouse_btn: MouseButton::Left, x, y, .. } => {
@@ -122,15 +132,14 @@ impl GameState {
         true
     }
 
-    pub fn update(&mut self, audio: SyncSender<bool>) -> Option<u64> {
+    pub fn update(&mut self, audio: SyncSender<Sounds>) -> Option<u64> {
         let mut score = 0;
         let mut scalar = 1;
-
-        let mut play_sound = false;
 
         if self.turns % 30 == 0 {
             for i in 0..self.tiles.len() {
                 if (0..4).any(|j| self.tiles[i][j]) {
+                    audio.send(Sounds::End).expect("send this pls :)");
                     return None;
                 }
             }
@@ -145,6 +154,7 @@ impl GameState {
                                 self.tiles[p.x() as usize][p.y() as usize] = true;
                             }
                             self.active = None;
+                            audio.send(Sounds::Ground).expect("you should always send");
                         } else {
                             self.active = Some(piece.set_stationary(true));
                         }
@@ -162,7 +172,7 @@ impl GameState {
                     for i in 0..self.tiles.len() {
                         self.tiles[i][j] = false;
                     }
-                    play_sound = true;
+                    audio.send(Sounds::Clear).expect("should send sound");
                 }
             }
 
@@ -173,10 +183,6 @@ impl GameState {
                         self.tiles[i][j - 1] = false;
                     }
                 }
-            }
-
-            if play_sound {
-                audio.send(true).expect("should send sound");
             }
         }
 

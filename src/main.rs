@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use sdl2::pixels::Color;
 
-use crate::lib::{AppState};
+use crate::lib::{AppState, Sounds};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
 use sdl2::mixer::AUDIO_S16LSB;
@@ -14,21 +14,21 @@ mod lib;
 
 fn main() -> Result<(), String> {
     let sdl_context = sdl2::init()?;
-    let _audio = sdl_context.audio()?;
-    let _mixer_context = sdl2::mixer::init(sdl2::mixer::InitFlag::OGG)?;
-    let music = sdl2::mixer::Music::from_file(Path::new("sounds/clear.ogg"))?;
+    let clear_sound = sdl2::mixer::Music::from_file(Path::new("sounds/clear.ogg"))?;
+    let ground_sound = sdl2::mixer::Music::from_file(Path::new("sounds/ground.ogg"))?;
+    let end_sound = sdl2::mixer::Music::from_file(Path::new("sounds/game_end.ogg"))?;
 
     let frequency = 44100;
     let format = AUDIO_S16LSB; // signed 16 bit samples, in little-endian byte order
     let channels = 2; // Stereo
     let chunk_size = 1024;
-    let _ = sdl2::mixer::open_audio(frequency, format, channels, chunk_size).unwrap();
-    sdl2::mixer::allocate_channels(0);
+    sdl2::mixer::open_audio(frequency, format, channels, chunk_size)?;
+    sdl2::mixer::allocate_channels(2);
 
     let ttf_context = sdl2::ttf::init().map_err(|e| e.to_string())?;
     let font = ttf_context.load_font(Path::new("DroidSansMono.ttf"), 64)?;
 
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    let mut event_pump = sdl_context.event_pump()?;
     let video_subsystem = sdl_context.video()?;
     let window = video_subsystem
         .window("tetrust", 800, 800)
@@ -44,9 +44,9 @@ fn main() -> Result<(), String> {
     canvas.clear();
     canvas.present();
 
-    let mut app_state = AppState::new(font);
+    let mut app_state = AppState::new();
 
-    let (a_send, a_recv): (SyncSender<bool>, Receiver<bool>) = mpsc::sync_channel(10);
+    let (a_send, a_recv): (SyncSender<Sounds>, Receiver<Sounds>) = mpsc::sync_channel(10);
 
     'running: loop {
         if !event_pump.poll_iter().all(|e| app_state.handle(e)) {
@@ -54,13 +54,16 @@ fn main() -> Result<(), String> {
         }
 
         app_state.update(a_send.clone());
-        app_state.draw(&mut canvas)?;
+        app_state.draw(&mut canvas, &font)?;
 
-        if let Ok(_sound) = a_recv.recv_timeout(Duration::from_millis(1)) {
-            music.play(1)?;
-        } else {
-            ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        while let Ok(s) = a_recv.recv_timeout(Duration::from_millis(1)) {
+            match s {
+                Sounds::Clear => clear_sound.play(1)?,
+                Sounds::Ground => ground_sound.play(1)?,
+                Sounds::End => end_sound.play(1)?,
+            }
         }
+        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
     Ok(())

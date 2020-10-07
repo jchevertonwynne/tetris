@@ -15,32 +15,36 @@ enum GuiState {
     Lost,
 }
 
-pub struct AppState<'a> {
+pub enum Sounds {
+    Clear,
+    Ground,
+    End,
+}
+
+pub struct AppState {
     gui_state: GuiState,
     game_state: GameState,
     score: u64,
     high_score: u64,
-    font: Font<'a, 'static>,
 }
 
-impl AppState<'_> {
-    pub fn new<'a>(font: Font<'a, 'static>) -> AppState<'a> {
+impl AppState {
+    pub fn new() -> AppState {
         AppState {
             gui_state: GuiState::Menu,
             game_state: GameState::new(),
             score: 0,
             high_score: 0,
-            font,
         }
     }
 
-    pub fn draw(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
+    pub fn draw<'a>(&self, canvas: &mut WindowCanvas, font: &Font<'a, 'static>) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
         self.game_state.draw(canvas)?;
         self.draw_pause_state(canvas)?;
-        self.draw_scores(canvas)?;
+        self.draw_scores(canvas, font)?;
         self.draw_next(canvas)?;
 
         canvas.present();
@@ -57,12 +61,12 @@ impl AppState<'_> {
         canvas.fill_rect(Rect::new(750, 0, 50, 50))
     }
 
-    pub fn draw_scores(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
+    pub fn draw_scores<'a>(&self, canvas: &mut WindowCanvas, font: &Font<'a, 'static>) -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(0, 255, 0));
 
-        let score = self.font.render(&*format!("Score: {}", self.score))
+        let score = font.render(&*format!("Score: {}", self.score))
             .blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string())?;
-        let high_score = self.font.render(&*format!("High score: {}", self.high_score))
+        let high_score = font.render(&*format!("High score: {}", self.high_score))
             .blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string())?;
 
         let texture_creator = canvas.texture_creator();
@@ -93,8 +97,7 @@ impl AppState<'_> {
     pub fn handle(&mut self, event: Event) -> bool {
         match event {
             Event::Quit { .. }
-            | Event::KeyDown { keycode: Some(Keycode::Escape), .. }
-            | Event::KeyDown { keycode: Some(Keycode::Q), .. } => false,
+            | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => false,
             Event::KeyDown { keycode: Some(Keycode::P), .. } => {
                 match &self.gui_state {
                     GuiState::Menu => self.gui_state = GuiState::Game,
@@ -110,10 +113,12 @@ impl AppState<'_> {
             Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
                 match &self.gui_state {
                     GuiState::Menu => self.gui_state = GuiState::Game,
-                    GuiState::Game => {
-                        return self.game_state.handle(event);
+                    GuiState::Game => return self.game_state.handle(event),
+                    GuiState::Lost => {
+                        self.game_state = GameState::new();
+                        self.score = 0;
+                        self.gui_state = GuiState::Game
                     }
-                    _ => ()
                 };
                 true
             }
@@ -127,7 +132,7 @@ impl AppState<'_> {
         }
     }
 
-    pub fn update(&mut self, audio: SyncSender<bool>) {
+    pub fn update(&mut self, audio: SyncSender<Sounds>) {
         match self.gui_state {
             GuiState::Menu
             | GuiState::Lost => (),
