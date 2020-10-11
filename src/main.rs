@@ -1,14 +1,14 @@
 extern crate sdl2;
 
 use std::path::Path;
-use std::time::Duration;
-
-use sdl2::pixels::Color;
-
-use crate::lib::{AppState, Sounds};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, SyncSender};
+use std::time::Duration;
+
 use sdl2::mixer::AUDIO_S16LSB;
+use sdl2::pixels::Color;
+
+use crate::lib::{AppState, Sound};
 
 mod lib;
 
@@ -46,7 +46,7 @@ fn main() -> Result<(), String> {
 
     let mut app_state = AppState::new();
 
-    let (a_send, a_recv): (SyncSender<Sounds>, Receiver<Sounds>) = mpsc::sync_channel(10);
+    let (a_send, a_recv): (SyncSender<Sound>, Receiver<Sound>) = mpsc::sync_channel(10);
 
     'running: loop {
         if !event_pump.poll_iter().all(|e| app_state.handle(e)) {
@@ -58,9 +58,9 @@ fn main() -> Result<(), String> {
 
         while let Ok(s) = a_recv.recv_timeout(Duration::from_millis(1)) {
             match s {
-                Sounds::Clear => clear_sound.play(1)?,
-                Sounds::Ground => ground_sound.play(1)?,
-                Sounds::End => end_sound.play(1)?,
+                Sound::Clear => clear_sound.play(1)?,
+                Sound::Ground => ground_sound.play(1)?,
+                Sound::End => end_sound.play(1)?,
             }
         }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

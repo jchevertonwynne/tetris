@@ -1,3 +1,5 @@
+use std::sync::mpsc::SyncSender;
+
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
@@ -5,8 +7,7 @@ use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
 use sdl2::ttf::Font;
 
-use crate::lib::{GameState};
-use std::sync::mpsc::SyncSender;
+use crate::lib::GameState;
 
 #[derive(PartialEq)]
 enum GuiState {
@@ -15,7 +16,7 @@ enum GuiState {
     Lost,
 }
 
-pub enum Sounds {
+pub enum Sound {
     Clear,
     Ground,
     End,
@@ -64,14 +65,18 @@ impl AppState {
         canvas.set_draw_color(Color::RGB(0, 255, 0));
 
         let score = font.render(&*format!("Score: {}", self.score))
-            .blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string())?;
+            .blended(Color::RGBA(255, 0, 0, 255))
+            .map_err(|e| e.to_string())?;
         let high_score = font.render(&*format!("High score: {}", self.high_score))
-            .blended(Color::RGBA(255, 0, 0, 255)).map_err(|e| e.to_string())?;
+            .blended(Color::RGBA(255, 0, 0, 255))
+            .map_err(|e| e.to_string())?;
 
         let texture_creator = canvas.texture_creator();
 
-        let score_texture = texture_creator.create_texture_from_surface(score).map_err(|e| e.to_string())?;
-        let high_score_texture = texture_creator.create_texture_from_surface(high_score).map_err(|e| e.to_string())?;
+        let score_texture = texture_creator.create_texture_from_surface(score)
+            .map_err(|e| e.to_string())?;
+        let high_score_texture = texture_creator.create_texture_from_surface(high_score)
+            .map_err(|e| e.to_string())?;
 
         canvas.copy(&score_texture, None, Some(Rect::new(450, 400, 200, 100)))?;
         canvas.copy(&high_score_texture, None, Some(Rect::new(450, 500, 300, 100)))
@@ -115,7 +120,7 @@ impl AppState {
         }
     }
 
-    pub fn update(&mut self, audio: SyncSender<Sounds>) {
+    pub fn update(&mut self, audio: SyncSender<Sound>) {
         match self.gui_state {
             GuiState::Menu
             | GuiState::Lost => (),

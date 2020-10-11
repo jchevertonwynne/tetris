@@ -1,11 +1,23 @@
 use std::ops::Add;
 
 use lazy_static::lazy_static;
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use sdl2::pixels::Color;
 use sdl2::rect::{Point, Rect};
 use sdl2::render::WindowCanvas;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+
+pub struct PlayerPiece {
+    anchor: Point,
+    box_size: usize,
+    tiles: [Point; 4],
+    stationary: bool,
+}
+
+pub struct PieceBag {
+    remaining: Vec<PlayerPiece>,
+    queued: Vec<PlayerPiece>,
+}
 
 lazy_static! {
     static ref OPTIONS: [PlayerPiece; 7] = [
@@ -89,13 +101,6 @@ lazy_static! {
     ];
 }
 
-pub struct PlayerPiece {
-    anchor: Point,
-    box_size: usize,
-    tiles: [Point; 4],
-    stationary: bool,
-}
-
 impl Clone for PlayerPiece {
     fn clone(&self) -> Self {
         Self {
@@ -112,7 +117,7 @@ impl PlayerPiece {
         OPTIONS[i].clone()
     }
 
-    pub fn all_shuffled() -> Vec<PlayerPiece> {
+    pub fn shuffled() -> Vec<PlayerPiece> {
         let mut tiles: Vec<_> = (0..7).map(|i| PlayerPiece::new(i)).collect();
         tiles.shuffle(&mut thread_rng());
         tiles
@@ -226,5 +231,40 @@ impl PlayerPiece {
         }
 
         Ok(())
+    }
+}
+
+impl PieceBag {
+    pub fn new() -> Self {
+        PieceBag {
+            remaining: PlayerPiece::shuffled(),
+            queued: PlayerPiece::shuffled(),
+        }
+    }
+
+    pub fn next(&mut self) -> PlayerPiece {
+        match self.remaining.pop() {
+            Some(piece) => piece,
+            None => {
+                std::mem::swap(&mut self.remaining, &mut self.queued);
+                self.queued = PlayerPiece::shuffled();
+                self.remaining.pop().unwrap()
+            }
+        }
+    }
+
+    pub fn peek(&self) -> &PlayerPiece {
+        if self.remaining.len() != 0 {
+            &self.remaining[self.remaining.len() - 1]
+        } else {
+            &self.queued[self.queued.len() - 1]
+        }
+    }
+
+    pub fn swap(&mut self, mut piece: PlayerPiece) -> PlayerPiece {
+        let mut out = self.next();
+        std::mem::swap(&mut out.anchor, &mut piece.anchor);
+        self.remaining.push(piece);
+        out
     }
 }
