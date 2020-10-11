@@ -13,6 +13,7 @@ pub struct GameState {
     turns: i64,
     active: Option<PlayerPiece>,
     bag: PieceBag,
+    cleared: u64
 }
 
 impl GameState {
@@ -22,11 +23,8 @@ impl GameState {
             turns: 0,
             active: None,
             bag: PieceBag::new(),
+            cleared: 0
         }
-    }
-
-    pub fn peek_next(&self) -> &PlayerPiece {
-        self.bag.peek()
     }
 
     pub fn draw(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
@@ -60,6 +58,18 @@ impl GameState {
         canvas.set_draw_color(Color::RGB(255, 0, 0));
         canvas.draw_line(Point::new(0, 160), Point::new(400, 160))?;
 
+        canvas.set_draw_color(Color::RGB(128, 50, 200));
+
+        for square in self.bag.peek().base().iter() {
+            canvas.fill_rect(Rect::new(500 + 50 * square.x(), 100 + 50 * square.y(), 50, 50))?;
+        }
+
+        canvas.set_draw_color(Color::RGB(0, 0, 255));
+        for i in 0..=4 {
+            canvas.draw_line(Point::new(500, 100 + i * 50), Point::new(700, 100 + i * 50))?;
+            canvas.draw_line(Point::new(500 + i * 50, 100), Point::new(500 + i * 50, 300))?;
+        }
+
         Ok(())
     }
 
@@ -84,14 +94,14 @@ impl GameState {
             Event::KeyDown { keycode: Some(Keycode::S), .. }
             | Event::KeyDown { keycode: Some(Keycode::Down), .. } => {
                 'loader: loop {
-                    if let Some(piece) = &self.active {
-                        if let Some(new_piece) = piece.go_down(&self.tiles) {
-                            self.active = Some(new_piece);
-                        } else {
-                            break 'loader;
+                    match &self.active {
+                        Some(piece) => {
+                            match piece.go_down(&self.tiles) {
+                                Some(new_piece) => self.active = Some(new_piece),
+                                None => break 'loader
+                            }
                         }
-                    } else {
-                        break 'loader;
+                        None => break 'loader
                     }
                 }
             }
@@ -136,7 +146,7 @@ impl GameState {
         let mut score = 0;
         let mut scalar = 1;
 
-        if self.turns % 30 == 0 {
+        if self.turns % (30 - (self.cleared / 3)) as i64 == 0 {
             for i in 0..self.tiles.len() {
                 if (0..4).any(|j| self.tiles[i][j]) {
                     audio.send(Sounds::End).expect("send this pls :)");
@@ -169,6 +179,7 @@ impl GameState {
                 if self.tiles.iter().all(|row| row[j]) {
                     score += scalar;
                     scalar += 1;
+                    self.cleared += 1;
                     for i in 0..self.tiles.len() {
                         self.tiles[i][j] = false;
                     }
@@ -177,7 +188,7 @@ impl GameState {
             }
 
             for j in (1..self.tiles[0].len()).rev() {
-                if self.tiles.iter().map(|row| row[j]).all(|v| !v) {
+                if self.tiles.iter().all(|row| !row[j]) {
                     for i in 0..self.tiles.len() {
                         self.tiles[i][j] = self.tiles[i][j - 1];
                         self.tiles[i][j - 1] = false;

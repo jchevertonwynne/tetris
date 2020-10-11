@@ -1,7 +1,7 @@
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
-use sdl2::rect::{Point, Rect};
+use sdl2::rect::Rect;
 use sdl2::render::WindowCanvas;
 use sdl2::ttf::Font;
 
@@ -45,7 +45,6 @@ impl AppState {
         self.game_state.draw(canvas)?;
         self.draw_pause_state(canvas)?;
         self.draw_scores(canvas, font)?;
-        self.draw_next(canvas)?;
 
         canvas.present();
 
@@ -76,22 +75,6 @@ impl AppState {
 
         canvas.copy(&score_texture, None, Some(Rect::new(450, 400, 200, 100)))?;
         canvas.copy(&high_score_texture, None, Some(Rect::new(450, 500, 300, 100)))
-    }
-
-    pub fn draw_next(&self, canvas: &mut WindowCanvas) -> Result<(), String> {
-        canvas.set_draw_color(Color::RGB(128, 50, 200));
-
-        for square in self.game_state.peek_next().base().iter() {
-            canvas.fill_rect(Rect::new(500 + 50 * square.x(), 100 + 50 * square.y(), 50, 50))?;
-        }
-
-        canvas.set_draw_color(Color::RGB(0, 0, 255));
-        for i in 0..=4 {
-            canvas.draw_line(Point::new(500, 100 + i * 50), Point::new(700, 100 + i * 50))?;
-            canvas.draw_line(Point::new(500 + i * 50, 100), Point::new(500 + i * 50, 300))?;
-        }
-
-        Ok(())
     }
 
     pub fn handle(&mut self, event: Event) -> bool {
